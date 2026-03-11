@@ -2,20 +2,8 @@ import { useState } from "react";
 import { TrashIcon } from "../../../assets/icons/TrashIcon";
 import { EditIcon } from "../../../assets/icons/EditIcon";
 import { LikeIcon } from "../../../assets/icons/LikeIcon";
-
-interface Post {
-  id: number;
-  title: string;
-  username: string;
-  content: string;
-  createdAt: string;
-}
-
-interface Comment {
-  id: number;
-  username: string;
-  content: string;
-}
+import { postsApi } from "../api/postsApi";
+import type { Post, Comment } from "../types/post";
 
 interface PostCardProps {
   post: Post;
@@ -34,38 +22,69 @@ export default function PostCard({
 
   const [openComments, setOpenComments] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [likes, setLikes] = useState(post.likes_count || 0);
+  const [comments, setComments] = useState<Comment[]>(post.comments || []);
   const [newComment, setNewComment] = useState("");
+  const [sendingComment, setSendingComment] = useState(false);
 
-  // MOCK COMMENTS
-  const [comments, setComments] = useState<Comment[]>([
-    {
-      id: 1,
-      username: "joao",
-      content: "Muito bom esse post!",
-    },
-    {
-      id: 2,
-      username: "maria",
-      content: "Concordo totalmente 👏",
-    },
-    {
-      id: 3,
-      username: "carlos",
-      content: "Isso me ajudou bastante.",
-    },
-  ]);
+  // ================= LIKE =================
+  const handleLike = async () => {
+    try {
+      await postsApi.toggleLike(currentUsername, post.id);
 
-  const handleAddComment = () => {
-    if (!newComment.trim()) return;
+      setLiked((prev) => !prev);
+      setLikes((prev) => (liked ? prev - 1 : prev + 1));
+    } catch (err) {
+      console.error("Erro ao curtir:", err);
+    }
+  };
 
-    const comment: Comment = {
+  // ================= COMMENT =================
+  const handleAddComment = async () => {
+    if (!newComment.trim() || sendingComment) return;
+
+    const content = newComment;
+
+    // UI otimista
+    const optimisticComment: Comment = {
       id: Date.now(),
       username: currentUsername,
-      content: newComment,
+      content,
     };
 
-    setComments((prev) => [...prev, comment]);
+    setComments((prev) => [...prev, optimisticComment]);
     setNewComment("");
+    setSendingComment(true);
+
+    try {
+      const response = await postsApi.addComment(
+        currentUsername,
+        post.id,
+        content
+      );
+
+      // substituir comentário otimista pelo real
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === optimisticComment.id
+            ? {
+                id: response.id,
+                username: response.author_username,
+                content: response.content,
+              }
+            : c
+        )
+      );
+    } catch (err) {
+      console.error("Erro ao comentar:", err);
+
+      // rollback se falhar
+      setComments((prev) =>
+        prev.filter((c) => c.id !== optimisticComment.id)
+      );
+    } finally {
+      setSendingComment(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -86,7 +105,6 @@ export default function PostCard({
               <button
                 onClick={() => onDelete(post.id)}
                 className="hover:opacity-80 transition-opacity cursor-pointer"
-                aria-label="Delete post"
               >
                 <TrashIcon />
               </button>
@@ -94,7 +112,6 @@ export default function PostCard({
               <button
                 onClick={() => onEdit(post)}
                 className="hover:opacity-80 transition-opacity cursor-pointer"
-                aria-label="Edit post"
               >
                 <EditIcon />
               </button>
@@ -103,13 +120,13 @@ export default function PostCard({
 
           {/* Like */}
           <button
-            onClick={() => setLiked(!liked)}
-            className={`transition cursor-pointer ${
+            onClick={handleLike}
+            className={`flex items-center gap-1 transition cursor-pointer ${
               liked ? "text-red-300" : "text-white"
             }`}
-            aria-label="Like post"
           >
             <LikeIcon />
+            <span className="text-sm">{likes}</span>
           </button>
         </div>
       </div>
@@ -126,7 +143,7 @@ export default function PostCard({
         </p>
       </div>
 
-      {/* Comments Accordion */}
+      {/* Comments */}
       <div>
         <button
           onClick={() => setOpenComments(!openComments)}
@@ -145,6 +162,12 @@ export default function PostCard({
 
         {openComments && (
           <div className="px-4 pb-4 space-y-3">
+            {comments.length === 0 && (
+              <p className="text-sm text-gray-400 text-center">
+                No comments yet
+              </p>
+            )}
+
             {comments.map((comment) => (
               <div
                 key={comment.id}
@@ -172,7 +195,7 @@ export default function PostCard({
 
               <button
                 onClick={handleAddComment}
-                disabled={!newComment.trim()}
+                disabled={!newComment.trim() || sendingComment}
                 className="px-4 h-9 bg-[#7695EC] text-white text-sm rounded-lg disabled:opacity-50"
               >
                 Send
