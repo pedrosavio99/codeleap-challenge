@@ -24,7 +24,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     let classes = 
-      'inline-flex items-center justify-center font-roboto font-bold text-base leading-none tracking-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 cursor-pointer';
+      'inline-flex items-center justify-center font-roboto font-semibold text-base leading-none tracking-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 cursor-pointer';
     if (variant === 'default' || size === 'md') {
       classes += ' h-[32px] px-8';
     } else if (size === 'sm') {

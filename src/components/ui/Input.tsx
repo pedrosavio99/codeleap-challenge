@@ -8,7 +8,7 @@ interface UsernameInputProps extends InputHTMLAttributes<HTMLInputElement> {
 const Input = forwardRef<HTMLInputElement, UsernameInputProps>(
     ({ label, error, className = '', ...props }, ref) => {
         return (
-            <div className="w-full max-w-md">
+            <div className="w-full">
                 {label && (
                     <label
                         htmlFor="username"
