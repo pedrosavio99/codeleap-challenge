@@ -13,19 +13,7 @@ import {
   POLLING_INTERVAL_INACTIVE,
 } from "../features/posts/constants";
 import type { Post } from "../features/posts/types/post";
-
-const formatTimeAgo = (dateString: string): string => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-
-  if (diffMin < 1) return "Just now";
-  if (diffMin < 60) return `${diffMin} minutes ago`;
-  const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return `${diffHours} hours ago`;
-  return `${Math.floor(diffHours / 24)} days ago`;
-};
+import { formatTimeAgo } from "../features/posts/hooks/useHomeLogic";
 
 export default function Home() {
   const username = useUsernameStore((s) => s.username);
@@ -381,7 +369,6 @@ export default function Home() {
         )}
       </main>
 
-      {/* Mantive exatamente como estava */}
       <EditPostModal
         isOpen={editModalOpen}
         post={editingPost}
